@@ -18,8 +18,13 @@ NC='\033[0m' # No Color
 DOTFILES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CONFIG_DIR="$DOTFILES_DIR/config"
 BIN_DIR="$DOTFILES_DIR/bin"
+THEMES_DIR="$DOTFILES_DIR/themes"
+FONTS_DIR="$DOTFILES_DIR/fonts"
 TARGET_CONFIG="$HOME/.config"
 TARGET_BIN="$HOME/.local/bin"
+TARGET_THEMES="$HOME/.themes"
+TARGET_FONTS="$HOME/.local/share/fonts/dotfiles-fonts"
+TARGET_COLOR_SCHEMES="$HOME/.local/share/color-schemes"
 
 BASE_BACKUP_DIR="$HOME/.dotfiles_backup"
 TIMESTAMP="$(date +%Y%m%d_%H%M%S)"
@@ -65,20 +70,25 @@ Opciones:
   -h, --help        Muestra esta ayuda.
 
 Módulos disponibles:
-  all         Instala todas las configuraciones y scripts (por defecto).
+  all         Instala todas las configuraciones, scripts, temas y fuentes (por defecto).
   i3          Configuración de i3 window manager.
   niri        Configuración de niri compositor.
   waybar      Configuración de waybar.
   polybar     Configuración de polybar.
   rofi        Temas y launchers de rofi.
   alacritty   Configuración y temas de alacritty.
+  gtk         Temas y configuraciones GTK (gtk-2.0, 3.0, 4.0, nwg-look).
+  qt          Configuración de Qt5ct, Qt6ct y esquemas de color Nightfly.
+  themes      Temas de ventana en ~/.themes (Breeze-Dark, NightFly).
+  fonts       Fuentes libres (Cozette, SUSE) y configuración de fontconfig.
   bin         Scripts personalizados en ~/.local/bin.
 
 Ejemplos:
   $(basename "$0")              # Enlaza todo con respaldos automáticos
   $(basename "$0") --deps       # Instala todos los programas y dependencias requeridas
   $(basename "$0") -c           # Comprueba estado de dependencias del sistema
-  $(basename "$0") --deps niri  # Instala solo dependencias de Niri y Waybar
+  $(basename "$0") gtk qt       # Enlaza temas GTK y Qt
+  $(basename "$0") fonts        # Enlaza fuentes libres y fontconfig
   $(basename "$0") --dry-run    # Simula la instalación
   $(basename "$0") --status     # Consulta estado de enlaces
   $(basename "$0") --restore    # Revierte al respaldo anterior
@@ -108,6 +118,15 @@ get_module_deps() {
         alacritty)
             echo "alacritty noto-fonts noto-fonts-cjk"
             ;;
+        gtk)
+            echo "breeze-icons nwg-look"
+            ;;
+        qt)
+            echo "qt5ct qt6ct breeze"
+            ;;
+        fonts)
+            echo "fontconfig noto-fonts noto-fonts-cjk noto-fonts-emoji ttf-dejavu ttf-terminus-nerd"
+            ;;
         bin|scripts)
             echo "curl jq unzip gcc podman ffmpeg v4l2loopback-dkms"
             ;;
@@ -121,7 +140,7 @@ get_all_deps() {
     local raw_pkgs=""
     for m in "$@"; do
         if [ "$m" = "all" ]; then
-            raw_pkgs="$raw_pkgs $(get_module_deps common) $(get_module_deps i3) $(get_module_deps niri) $(get_module_deps waybar) $(get_module_deps polybar) $(get_module_deps rofi) $(get_module_deps alacritty) $(get_module_deps bin)"
+            raw_pkgs="$raw_pkgs $(get_module_deps common) $(get_module_deps i3) $(get_module_deps niri) $(get_module_deps waybar) $(get_module_deps polybar) $(get_module_deps rofi) $(get_module_deps alacritty) $(get_module_deps gtk) $(get_module_deps qt) $(get_module_deps fonts) $(get_module_deps bin)"
         else
             raw_pkgs="$raw_pkgs $(get_module_deps common) $(get_module_deps "$m")"
         fi
@@ -202,6 +221,7 @@ show_status() {
         [ -d "$dir" ] || continue
         local name
         name="$(basename "$dir")"
+        [ "$name" = "gtk-2.0" ] || [ "$name" = "color-schemes" ] && continue
         local target="$TARGET_CONFIG/$name"
 
         if [ -L "$target" ]; then
@@ -218,6 +238,44 @@ show_status() {
             echo -e "  ${YELLOW}○${NC} $name no está instalado en $TARGET_CONFIG"
         fi
     done
+
+    echo -e "\n${BOLD}--- Estado de Temas y Apariencia ---${NC}"
+    # GTK 2
+    if [ -L "$HOME/.gtkrc-2.0" ] && [ "$(readlink -f "$HOME/.gtkrc-2.0")" = "$(readlink -f "$CONFIG_DIR/gtk-2.0/gtkrc-2.0")" ]; then
+        echo -e "  ${GREEN}✔${NC} ~/.gtkrc-2.0 (correcto)"
+    else
+        echo -e "  ${YELLOW}○${NC} ~/.gtkrc-2.0 no apunta a dotfiles"
+    fi
+    # Themes
+    for th in "$THEMES_DIR"/*; do
+        [ -d "$th" ] || continue
+        local th_name
+        th_name="$(basename "$th")"
+        local target_th="$TARGET_THEMES/$th_name"
+        if [ -L "$target_th" ] && [ "$(readlink -f "$target_th")" = "$(readlink -f "$th")" ]; then
+            echo -e "  ${GREEN}✔${NC} Tema: $th_name"
+        else
+            echo -e "  ${YELLOW}○${NC} Tema: $th_name no enlazado"
+        fi
+    done
+    # Color schemes
+    for cs in "$CONFIG_DIR/color-schemes"/*; do
+        [ -e "$cs" ] || continue
+        local cs_name
+        cs_name="$(basename "$cs")"
+        local target_cs="$TARGET_COLOR_SCHEMES/$cs_name"
+        if [ -L "$target_cs" ] && [ "$(readlink -f "$target_cs")" = "$(readlink -f "$cs")" ]; then
+            echo -e "  ${GREEN}✔${NC} Color scheme: $cs_name"
+        else
+            echo -e "  ${YELLOW}○${NC} Color scheme: $cs_name no enlazado"
+        fi
+    done
+    # Fonts
+    if [ -L "$TARGET_FONTS" ] && [ "$(readlink -f "$TARGET_FONTS")" = "$(readlink -f "$FONTS_DIR")" ]; then
+        echo -e "  ${GREEN}✔${NC} Fuentes libres en $TARGET_FONTS"
+    else
+        echo -e "  ${YELLOW}○${NC} Fuentes libres no enlazadas en $TARGET_FONTS"
+    fi
 
     echo -e "\n${BOLD}--- Estado de Scripts (~/.local/bin) ---${NC}"
     for script in "$BIN_DIR"/*; do
@@ -275,6 +333,37 @@ restore_backup() {
             fi
             mv "$item" "$target"
             log_ok "Restaurado: .config/$name"
+        done
+    fi
+
+    # Restaurar ~/.gtkrc-2.0
+    if [ -f "$latest_backup/.gtkrc-2.0" ]; then
+        [ -L "$HOME/.gtkrc-2.0" ] && rm "$HOME/.gtkrc-2.0"
+        mv "$latest_backup/.gtkrc-2.0" "$HOME/.gtkrc-2.0"
+        log_ok "Restaurado: ~/.gtkrc-2.0"
+    fi
+
+    # Restaurar ~/.themes
+    if [ -d "$latest_backup/.themes" ]; then
+        for item in "$latest_backup/.themes"/*; do
+            [ -e "$item" ] || continue
+            local name
+            name="$(basename "$item")"
+            [ -L "$TARGET_THEMES/$name" ] && rm "$TARGET_THEMES/$name"
+            mv "$item" "$TARGET_THEMES/$name"
+            log_ok "Restaurado: .themes/$name"
+        done
+    fi
+
+    # Restaurar color-schemes
+    if [ -d "$latest_backup/.local/share/color-schemes" ]; then
+        for item in "$latest_backup/.local/share/color-schemes"/*; do
+            [ -e "$item" ] || continue
+            local name
+            name="$(basename "$item")"
+            [ -L "$TARGET_COLOR_SCHEMES/$name" ] && rm "$TARGET_COLOR_SCHEMES/$name"
+            mv "$item" "$TARGET_COLOR_SCHEMES/$name"
+            log_ok "Restaurado: .local/share/color-schemes/$name"
         done
     fi
 
@@ -404,6 +493,129 @@ link_scripts() {
     done
 }
 
+link_file() {
+    local source_path="$1"
+    local target_path="$2"
+    local rel_dest="$3"
+
+    if [ ! -f "$source_path" ]; then
+        log_err "Archivo no encontrado: $source_path"
+        return 1
+    fi
+
+    if [ -L "$target_path" ]; then
+        local current_link
+        current_link="$(readlink -f "$target_path")"
+        local expected_link
+        expected_link="$(readlink -f "$source_path")"
+        if [ "$current_link" = "$expected_link" ]; then
+            log_ok "Ya enlazado: $target_path -> $source_path"
+            return 0
+        else
+            log_warn "Enlace apunta a otro destino: $current_link"
+            if [ "$DRY_RUN" = false ]; then
+                rm "$target_path"
+            fi
+        fi
+    elif [ -e "$target_path" ]; then
+        backup_item "$target_path" "$rel_dest"
+    fi
+
+    if [ "$DRY_RUN" = true ]; then
+        log_info "[DRY-RUN] Se crearía symlink: $target_path -> $source_path"
+    else
+        mkdir -p "$(dirname "$target_path")"
+        ln -sf "$source_path" "$target_path"
+        log_ok "Enlazado: $target_path -> $source_path"
+    fi
+}
+
+link_gtk() {
+    log_info "Instalando configuraciones y temas GTK..."
+    link_dir "gtk-3.0"
+    link_dir "gtk-4.0"
+    link_dir "nwg-look"
+    link_file "$CONFIG_DIR/gtk-2.0/gtkrc-2.0" "$HOME/.gtkrc-2.0" ".gtkrc-2.0"
+}
+
+link_qt() {
+    log_info "Instalando configuraciones Qt y esquemas de color..."
+    link_dir "qt5ct"
+    link_dir "qt6ct"
+    if [ "$DRY_RUN" = false ]; then
+        mkdir -p "$TARGET_COLOR_SCHEMES"
+    fi
+    for cs in "$CONFIG_DIR/color-schemes"/*; do
+        [ -e "$cs" ] || continue
+        link_file "$cs" "$TARGET_COLOR_SCHEMES/$(basename "$cs")" ".local/share/color-schemes/$(basename "$cs")"
+    done
+}
+
+link_themes() {
+    log_info "Instalando temas de ventanas en ~/.themes..."
+    if [ "$DRY_RUN" = false ]; then
+        mkdir -p "$TARGET_THEMES"
+    fi
+    for th in "$THEMES_DIR"/*; do
+        [ -d "$th" ] || continue
+        local th_name
+        th_name="$(basename "$th")"
+        local target_th="$TARGET_THEMES/$th_name"
+
+        if [ -L "$target_th" ]; then
+            local current_link
+            current_link="$(readlink -f "$target_th")"
+            if [ "$current_link" = "$(readlink -f "$th")" ]; then
+                log_ok "Tema ya enlazado: $th_name"
+                continue
+            else
+                [ "$DRY_RUN" = false ] && rm "$target_th"
+            fi
+        elif [ -e "$target_th" ]; then
+            backup_item "$target_th" ".themes/$th_name"
+        fi
+
+        if [ "$DRY_RUN" = true ]; then
+            log_info "[DRY-RUN] Se crearía symlink: $target_th -> $th"
+        else
+            ln -sfn "$th" "$target_th"
+            log_ok "Tema enlazado: $th_name"
+        fi
+    done
+}
+
+link_fonts() {
+    log_info "Instalando fuentes libres y configuración de fontconfig..."
+    link_dir "fontconfig"
+
+    local target_f="$TARGET_FONTS"
+    if [ -L "$target_f" ]; then
+        local current_link
+        current_link="$(readlink -f "$target_f")"
+        if [ "$current_link" = "$(readlink -f "$FONTS_DIR")" ]; then
+            log_ok "Directorio de fuentes ya enlazado: $target_f"
+            return 0
+        else
+            [ "$DRY_RUN" = false ] && rm "$target_f"
+        fi
+    elif [ -e "$target_f" ]; then
+        backup_item "$target_f" ".local/share/fonts/dotfiles-fonts"
+    fi
+
+    if [ "$DRY_RUN" = true ]; then
+        log_info "[DRY-RUN] Se crearía symlink: $target_f -> $FONTS_DIR"
+    else
+        mkdir -p "$(dirname "$target_f")"
+        ln -sfn "$FONTS_DIR" "$target_f"
+        log_ok "Fuentes libres enlazadas: $target_f -> $FONTS_DIR"
+        if command -v fc-cache >/dev/null 2>&1; then
+            log_info "Actualizando caché de fuentes del sistema..."
+            fc-cache -f "$target_f" >/dev/null 2>&1 || true
+            log_ok "Caché de fuentes actualizada."
+        fi
+    fi
+}
+
 # ------------------------------------------------------------------------------
 # Procesamiento de argumentos
 # ------------------------------------------------------------------------------
@@ -439,7 +651,7 @@ while [[ $# -gt 0 ]]; do
             show_help
             exit 0
             ;;
-        all|i3|niri|waybar|polybar|rofi|alacritty|bin|scripts)
+        all|i3|niri|waybar|polybar|rofi|alacritty|bin|scripts|gtk|qt|themes|fonts)
             MODULES+=("$1")
             shift
             ;;
@@ -485,10 +697,26 @@ for mod in "${MODULES[@]}"; do
             link_dir "polybar"
             link_dir "rofi"
             link_dir "alacritty"
+            link_gtk
+            link_qt
+            link_themes
+            link_fonts
             link_scripts
             ;;
         i3|niri|waybar|polybar|rofi|alacritty)
             link_dir "$mod"
+            ;;
+        gtk)
+            link_gtk
+            ;;
+        qt)
+            link_qt
+            ;;
+        themes)
+            link_themes
+            ;;
+        fonts)
+            link_fonts
             ;;
         bin|scripts)
             link_scripts

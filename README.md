@@ -32,14 +32,37 @@ dotfiles/
 │   └── wellcome                  # Script de bienvenida con información de sistema
 ├── config/                       # Configuraciones (enlazadas a ~/.config)
 │   ├── alacritty/                # Terminal Alacritty con tema Nightfly
+│   ├── color-schemes/            # Esquemas de color Qt (NightflyCustom, Nightfly)
+│   ├── fontconfig/               # Reglas de renderizado y emojis (fonts.conf)
+│   ├── gtk-2.0/                  # Archivo ~/.gtkrc-2.0
+│   ├── gtk-3.0/                  # Tema Breeze-Dark / colores Nightfly y CSS
+│   ├── gtk-4.0/                  # Tema Breeze-Dark / colores Nightfly para GTK4
 │   ├── i3/                       # Configuración de i3, fondos y screenshot.sh
 │   ├── niri/                     # Configuración de Niri (config.kdl, monitor.kdl)
+│   ├── nwg-look/                 # Configuración de apariencia nwg-look
 │   ├── polybar/                  # Barra de estado Polybar para i3 (launch.sh)
-│   ├── waybar/                   # Barra de estado Waybar para Niri
-│   └── rofi/                     # Lanzador Rofi (temas Catppuccin, Nightfly, Launchpad)
+│   ├── qt5ct/                    # Configuración de estilo y paleta para Qt5
+│   ├── qt6ct/                    # Configuración de estilo y paleta para Qt6
+│   ├── rofi/                     # Lanzador Rofi (temas Catppuccin, Nightfly, Launchpad)
+│   └── waybar/                   # Barra de estado Waybar para Niri
+├── fonts/                        # Fuentes libres y OFL (Cozette, SUSE, CustomTkinter)
+├── themes/                       # Temas de ventana (enlazados a ~/.themes)
+│   ├── Breeze-Dark/              # Tema Breeze-Dark modificado con nwg-look
+│   └── NightFly/                 # Tema NightFly GTK2/3/4
 ├── install.sh                    # Script de instalación, symlinks y respaldos
 └── README.md                     # Documentación general
 ```
+
+---
+
+## 🎨 Temas, Apariencia y Fuentes
+
+- **Tema GTK (`config/gtk-*`, `themes/`)**: Configuración completa para GTK 2, 3 y 4 con estilo **Breeze-Dark** modificado con la paleta **Nightfly** (`#011627`, `#21c7a8`, `#30ffd2`), cursores `breeze_cursors` e iconos `breeze-dark`.
+- **Tema Qt (`config/qt5ct`, `config/qt6ct`, `config/color-schemes`)**: Coherencia visual total entre aplicaciones Qt y GTK mediante `qt5ct` y `qt6ct` usando el motor Breeze con el esquema `NightflyCustom.colors`.
+- **Fuentes (`fonts/`, `config/fontconfig`)**:
+  - Contiene exclusivamente tipografías de código abierto y libres de licencia (familia **SUSE / SUSEMono** bajo licencia SIL OFL, **Cozette** bitmap/vectorial bajo MIT).
+  - Reglas avanzadas de **fontconfig** (`fonts.conf`) para priorizar emojis y suavizado subpixel RGB.
+  - **Fuentes de Windows excluidas**: Todas las fuentes propietarias de Microsoft (Arial, Calibri, Tahoma, Segoe UI, Consolas, MS Gothic, etc.) han sido estrictamente filtradas e ignoradas en `.gitignore`.
 
 ---
 
@@ -58,7 +81,8 @@ Instala automáticamente los programas necesarios a través de `paru` / `yay` / 
 ```bash
 ./install.sh --deps        # Instala dependencias para todos los módulos
 ./install.sh --deps niri   # Solo dependencias para Niri y Waybar
-./install.sh --deps i3     # Solo dependencias para i3 y Polybar
+./install.sh --deps gtk    # Dependencias de temas GTK
+./install.sh --deps qt     # Dependencias de Qt (qt5ct, qt6ct, breeze)
 ```
 
 ### 3. Comprobar estado de enlaces simbólicos
@@ -73,7 +97,7 @@ Verifica los cambios que se harían sin modificar nada en tu sistema:
 ```
 
 ### 5. Enlazar dotfiles
-Aplica los symlinks de todos los entornos y scripts:
+Aplica los symlinks de todos los entornos, temas, fuentes y scripts:
 ```bash
 ./install.sh
 ```
@@ -81,10 +105,10 @@ Aplica los symlinks de todos los entornos y scripts:
 ### 6. Instalar módulos específicos
 Puedes enlazar únicamente lo que necesites:
 ```bash
+./install.sh gtk qt themes fonts # Solo apariencia y fuentes
 ./install.sh niri waybar          # Solo Niri y Waybar
 ./install.sh i3 polybar           # Solo i3 y Polybar
 ./install.sh bin                  # Solo los scripts de ~/.local/bin
-./install.sh alacritty rofi       # Solo terminal y lanzador
 ```
 
 ### 7. Revertir cambios
