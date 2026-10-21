@@ -56,6 +56,8 @@ show_help() {
 Uso: $(basename "$0") [OPCIONES] [MODULOS...]
 
 Opciones:
+  -d, --deps        Instala las dependencias y paquetes necesarios (pacman/paru).
+  -c, --check-deps  Comprueba qué paquetes están instalados o faltan en el sistema.
   -n, --dry-run     Modo simulación, muestra qué se enlazará sin hacer cambios.
   -f, --force       Fuerza el enlace sobrescribiendo enlaces existentes.
   -s, --status      Muestra el estado actual de los enlaces simbólicos.
@@ -73,13 +75,122 @@ Módulos disponibles:
   bin         Scripts personalizados en ~/.local/bin.
 
 Ejemplos:
-  $(basename "$0")              # Instala todo con respaldos automáticos
+  $(basename "$0")              # Enlaza todo con respaldos automáticos
+  $(basename "$0") --deps       # Instala todos los programas y dependencias requeridas
+  $(basename "$0") -c           # Comprueba estado de dependencias del sistema
+  $(basename "$0") --deps niri  # Instala solo dependencias de Niri y Waybar
   $(basename "$0") --dry-run    # Simula la instalación
   $(basename "$0") --status     # Consulta estado de enlaces
   $(basename "$0") --restore    # Revierte al respaldo anterior
-  $(basename "$0") niri waybar  # Instala solo niri y waybar
-  $(basename "$0") bin          # Enlaza solo los scripts custom
 EOF
+}
+
+# ------------------------------------------------------------------------------
+# Dependencias por Módulo (Arch Linux)
+# ------------------------------------------------------------------------------
+get_module_deps() {
+    case "$1" in
+        i3)
+            echo "i3-wm feh picom dex rofi maim xclip xorg-xrandr xorg-xset xorg-xinput libpulse ttf-dejavu"
+            ;;
+        niri)
+            echo "niri swaybg swaylock rofi-wayland brightnessctl grim slurp wl-clipboard xdg-desktop-portal-gnome wireplumber playerctl"
+            ;;
+        waybar)
+            echo "waybar ttf-terminus-nerd wireplumber libpulse"
+            ;;
+        polybar)
+            echo "polybar acpi ttf-terminus-nerd libpulse"
+            ;;
+        rofi)
+            echo "rofi-wayland"
+            ;;
+        alacritty)
+            echo "alacritty noto-fonts noto-fonts-cjk"
+            ;;
+        bin|scripts)
+            echo "curl jq unzip gcc podman ffmpeg v4l2loopback-dkms"
+            ;;
+        common)
+            echo "pcmanfm network-manager-applet polkit-gnome pipewire wireplumber libpulse"
+            ;;
+    esac
+}
+
+get_all_deps() {
+    local raw_pkgs=""
+    for m in "$@"; do
+        if [ "$m" = "all" ]; then
+            raw_pkgs="$raw_pkgs $(get_module_deps common) $(get_module_deps i3) $(get_module_deps niri) $(get_module_deps waybar) $(get_module_deps polybar) $(get_module_deps rofi) $(get_module_deps alacritty) $(get_module_deps bin)"
+        else
+            raw_pkgs="$raw_pkgs $(get_module_deps common) $(get_module_deps "$m")"
+        fi
+    done
+    echo "$raw_pkgs" | tr -s ' ' '\n' | awk '!seen[$0]++' | tr '\n' ' '
+}
+
+check_dependencies() {
+    local pkgs=($(get_all_deps "$@"))
+    local missing=()
+    local installed=()
+
+    echo -e "${BOLD}--- Estado de Dependencias y Paquetes (${#pkgs[@]} evaluados) ---${NC}"
+    for pkg in "${pkgs[@]}"; do
+        if pacman -T "$pkg" >/dev/null 2>&1; then
+            installed+=("$pkg")
+            echo -e "  ${GREEN}✔${NC} $pkg"
+        else
+            missing+=("$pkg")
+            echo -e "  ${RED}✖${NC} $pkg (faltante)"
+        fi
+    done
+
+    echo ""
+    log_info "Total requeridos: ${#pkgs[@]} | Instalados: ${#installed[@]} | Faltantes: ${#missing[@]}"
+    if [ ${#missing[@]} -gt 0 ]; then
+        echo -e "\n${YELLOW}Para instalar los paquetes faltantes ejecuta:${NC}"
+        echo -e "  sudo pacman -S --needed ${missing[*]}"
+        echo -e "  O corre: $(basename "$0") --deps ${*:-}"
+    else
+        log_ok "¡Todas las dependencias necesarias están instaladas!"
+    fi
+}
+
+install_dependencies() {
+    local pkgs=($(get_all_deps "$@"))
+    local missing=()
+
+    for pkg in "${pkgs[@]}"; do
+        if ! pacman -T "$pkg" >/dev/null 2>&1; then
+            missing+=("$pkg")
+        fi
+    done
+
+    if [ ${#missing[@]} -eq 0 ]; then
+        log_ok "Todas las dependencias evaluadas ya están instaladas en el sistema."
+        return 0
+    fi
+
+    echo -e "${YELLOW}Se detectaron ${#missing[@]} paquetes faltantes:${NC}"
+    echo -e "  ${BOLD}${missing[*]}${NC}"
+    echo ""
+
+    if [ "$DRY_RUN" = true ]; then
+        log_info "[DRY-RUN] Se ejecutaría la instalación de: ${missing[*]}"
+        return 0
+    fi
+
+    log_info "Iniciando instalación mediante el gestor de paquetes..."
+    if command -v paru >/dev/null 2>&1; then
+        paru -S --needed "${missing[@]}"
+    elif command -v yay >/dev/null 2>&1; then
+        yay -S --needed "${missing[@]}"
+    elif command -v pacman >/dev/null 2>&1; then
+        sudo pacman -S --needed "${missing[@]}"
+    else
+        log_err "No se encontró pacman, paru o yay en el sistema."
+        return 1
+    fi
 }
 
 # ------------------------------------------------------------------------------
@@ -297,9 +408,18 @@ link_scripts() {
 # Procesamiento de argumentos
 # ------------------------------------------------------------------------------
 MODULES=()
+ACTION="link"
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
+        -d|--deps|--install-deps)
+            ACTION="deps"
+            shift
+            ;;
+        -c|--check-deps)
+            ACTION="check_deps"
+            shift
+            ;;
         -n|--dry-run)
             DRY_RUN=true
             shift
@@ -331,9 +451,21 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-# Si no se pasaron módulos, instalar todos por defecto
+# Si no se pasaron módulos, instalar o comprobar todos por defecto
 if [ ${#MODULES[@]} -eq 0 ]; then
     MODULES=("all")
+fi
+
+# Acción: Solo comprobar dependencias
+if [ "$ACTION" = "check_deps" ]; then
+    check_dependencies "${MODULES[@]}"
+    exit 0
+fi
+
+# Acción: Instalar paquetes y dependencias
+if [ "$ACTION" = "deps" ]; then
+    install_dependencies "${MODULES[@]}"
+    exit 0
 fi
 
 echo -e "${BOLD}=====================================================${NC}"
@@ -367,8 +499,23 @@ done
 echo ""
 echo -e "${BOLD}=====================================================${NC}"
 log_ok "Proceso completado con éxito."
+
+# Advertir si faltan programas para los módulos instalados
+missing_summary=()
+for p in $(get_all_deps "${MODULES[@]}"); do
+    if ! pacman -T "$p" >/dev/null 2>&1; then
+        missing_summary+=("$p")
+    fi
+done
+
+if [ ${#missing_summary[@]} -gt 0 ]; then
+    echo ""
+    log_warn "Se detectaron ${#missing_summary[@]} programas recomendados no instalados: ${missing_summary[*]}"
+    echo -e "  💡 Para instalarlos ahora, corre: ${BOLD}./install.sh --deps ${MODULES[*]}${NC}"
+fi
+
 if [ "$HAS_BACKUP" = true ]; then
-    echo -e "${YELLOW}Se realizaron respaldos de tus archivos previos en:${NC}"
+    echo -e "\n${YELLOW}Se realizaron respaldos de tus archivos previos en:${NC}"
     echo -e "  📂 $BACKUP_DIR"
 fi
 echo -e "${BOLD}=====================================================${NC}"

@@ -45,26 +45,40 @@ dotfiles/
 
 ## 🚀 Instalación y Gestión (`install.sh`)
 
-El repositorio incluye un script `install.sh` que gestiona de manera segura los enlaces simbólicos (`symlinks`), creando un respaldo automático con marca de tiempo en `~/.dotfiles_backup/` de cualquier archivo existente antes de reemplazarlo.
+El repositorio incluye un script `install.sh` que gestiona de manera segura los enlaces simbólicos (`symlinks`), instala las dependencias necesarias y crea un respaldo automático con marca de tiempo en `~/.dotfiles_backup/` de cualquier archivo existente antes de reemplazarlo.
 
-### 1. Comprobar estado actual
+### 1. Comprobar dependencias del sistema
+Verifica qué paquetes y herramientas necesarias están instaladas o faltan:
+```bash
+./install.sh -c
+```
+
+### 2. Instalar paquetes y dependencias faltantes
+Instala automáticamente los programas necesarios a través de `paru` / `yay` / `pacman`:
+```bash
+./install.sh --deps        # Instala dependencias para todos los módulos
+./install.sh --deps niri   # Solo dependencias para Niri y Waybar
+./install.sh --deps i3     # Solo dependencias para i3 y Polybar
+```
+
+### 3. Comprobar estado de enlaces simbólicos
 ```bash
 ./install.sh --status
 ```
 
-### 2. Simular instalación (Dry-Run)
+### 4. Simular instalación de enlaces (Dry-Run)
 Verifica los cambios que se harían sin modificar nada en tu sistema:
 ```bash
 ./install.sh --dry-run
 ```
 
-### 3. Instalar todo
+### 5. Enlazar dotfiles
 Aplica los symlinks de todos los entornos y scripts:
 ```bash
 ./install.sh
 ```
 
-### 4. Instalar módulos específicos
+### 6. Instalar módulos específicos
 Puedes enlazar únicamente lo que necesites:
 ```bash
 ./install.sh niri waybar          # Solo Niri y Waybar
@@ -73,7 +87,7 @@ Puedes enlazar únicamente lo que necesites:
 ./install.sh alacritty rofi       # Solo terminal y lanzador
 ```
 
-### 5. Revertir cambios
+### 7. Revertir cambios
 Si deseas deshacer la instalación y restaurar los archivos previos:
 ```bash
 ./install.sh --restore
