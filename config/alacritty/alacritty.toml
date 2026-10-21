@@ -1,0 +1,15 @@
+[general]
+import = [
+    "~/.config/alacritty/themes/themes/nightfly.toml"
+]
+
+[window]
+opacity = 0.8
+
+[font]
+normal = { family = "ms gothic", style = "Medium" }
+bold = { family = "ms gothic", style = "Bold" }
+italic = { family = "ms gothic", style = "Retina" }
+bold_italic = { family = "ms gothic", style = "SemiBold" }
+size = 15
+

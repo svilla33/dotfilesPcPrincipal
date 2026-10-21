@@ -1,0 +1,37 @@
+* {
+  /* Base */
+  base: #011627;
+  mantle: #011627;
+  crust: #011627;
+
+  /* Superficies */
+  surface0: #1d3b53;
+  surface1: #1d3b53;
+  surface2: #7c8f8f;
+
+  /* Overlays */
+  overlay0: #7c8f8f;
+  overlay1: #9ca1aa;
+  overlay2: #bdc1c6;
+
+  /* Texto */
+  text: #bdc1c6;
+  subtext0: #9ca1aa;
+  subtext1: #a1aab8;
+
+  /* Acentos (mapeados por intención) */
+  blue: #82aaff;
+  lavender: #82aaff;
+  sapphire: #7fdbca;
+  sky: #7fdbca;
+  teal: #21c7a8;
+  green: #a1cd5e;
+  yellow: #e3d18a;
+  peach: #ecc48d;
+  maroon: #ff5874;
+  red: #fc514e;
+  mauve: #c792ea;
+  pink: #ae81ff;
+  flamingo: #ff5874;
+  rosewater: #d6deeb;
+}

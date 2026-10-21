@@ -1,0 +1,20 @@
+# Backups y temporales
+*.bak
+*.old
+*~
+*.swp
+*.tmp
+
+# Archivos de sistema
+.DS_Store
+Thumbs.db
+
+# Python
+__pycache__/
+*.pyc
+
+# Binarios pesados no deseados en dotfiles
+bin/agy*
+bin/blender*
+bin/unity*
+bin/gemini*

@@ -1,0 +1,114 @@
+#!/bin/bash
+
+# Colores
+GREEN="\e[32m"
+CYAN="\e[36m"
+YELLOW="\e[33m"
+MAGENTA="\e[35m"
+RESET="\e[0m"
+
+clear
+
+echo -e "${GREEN}Hola Suli, ¡bienvenido!${RESET}"
+echo ""
+
+echo -e "${CYAN}📅 Fecha:${RESET}"
+date +"%A %d de %B de %Y"
+echo ""
+
+echo -e "${CYAN}🕒 Hora mundial:${RESET}"
+echo -e "🇨🇴 Colombia: $(TZ='America/Bogota' date '+%H:%M:%S')"
+echo -e "🇬🇧 UK:       $(TZ='Europe/London' date '+%H:%M:%S')"
+echo -e "🇯🇵 Japón:    $(TZ='Asia/Tokyo' date '+%H:%M:%S')"
+echo ""
+
+echo -e "${CYAN}🌦️ Clima en Rionegro:${RESET}"
+curl -s "wttr.in/6.15,-75.37?format=2"
+
+echo ""
+
+
+echo -e "${MAGENTA}📖 Frase del día:${RESET}"
+
+curl -s "https://frasedeldia.azurewebsites.net/api/phrase" \
+| jq -r '"\"\(.phrase)\" — \(.author)"'
+
+echo ""
+
+echo -e "${YELLOW}🎉 Días internacionales de hoy:${RESET}"
+
+# DiaInternacionalDe: días que se celebran hoy
+mes_num=$(date +%-m)
+dia=$(date +%-d)
+
+case "$mes_num" in
+1) mes_nombre="enero" ;;
+2) mes_nombre="febrero" ;;
+3) mes_nombre="marzo" ;;
+4) mes_nombre="abril" ;;
+5) mes_nombre="mayo" ;;
+6) mes_nombre="junio" ;;
+7) mes_nombre="julio" ;;
+8) mes_nombre="agosto" ;;
+9) mes_nombre="septiembre" ;;
+10) mes_nombre="octubre" ;;
+11) mes_nombre="noviembre" ;;
+12) mes_nombre="diciembre" ;;
+esac
+
+curl -fsSL "https://www.diainternacionalde.com/calendario/${mes_nombre}/${dia}" \
+| pup 'article.bqDestacadoV h3 a[href^="/ficha/"] text{}' \
+| head -3 \
+| awk '{print "- " $0}'
+
+echo ""
+
+palabra=$(curl -s -A "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36" "https://dle.rae.es/" \
+| pup 'span.c-word-day__word text{}' \
+| head -1)
+
+palabra_url=$(printf '%s' "$palabra" | jq -sRr @uri)
+
+
+
+echo "📚 Palabra del día:"
+
+echo " ${palabra^}"
+
+if [ -n "$palabra_url" ]; then
+curl -fsS "https://es.wiktionary.org/w/api.php?action=query&prop=extracts&explaintext=1&titles=${palabra_url}&format=json&redirects=1" \
+| jq -r '.query.pages[]?.extract // empty' 2>/dev/null \
+| awk '
+/=== Sustantivo/ {
+    in_def=1
+    next
+}
+
+/===/ && in_def {
+    exit
+}
+
+in_def && /^[0-9]+( .*)?$/ {
+
+    # Caso: "1 Estaciones"
+    linea=$0
+    sub(/^[0-9]+ ?/, "", linea)
+
+    if (linea != "") {
+        getline
+        print "- " $0
+    }
+
+    # Caso:
+    # 2
+    # Definición...
+    else {
+        getline
+        print "- " $0
+    }
+}
+'
+else
+echo "- No disponible hoy"
+fi
+echo ""

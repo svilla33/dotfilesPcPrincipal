@@ -1,0 +1,2 @@
+#!/bin/bash
+PYTHONPATH="/home/suli/Documents/opencode-proyects/musicdownloader/muget/src" exec ~/.local/share/muget-venv/bin/python -m muget "$@"

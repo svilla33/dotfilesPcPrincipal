@@ -1,0 +1,115 @@
+// Waybar configuration for niri
+// https://github.com/Alexays/Waybar/wiki/Configuration
+{
+    "layer": "top",
+    "position": "top",
+    "height": 15,
+    "modules-left": [
+        "niri/workspaces",
+        "niri/window"
+    ],
+    "modules-center": [],
+    "modules-right": [
+        "pulseaudio",
+        "network",
+        "memory",
+        "cpu",
+        "temperature#cpu",
+        "custom/gpu-temp",
+        "battery",
+        "tray",
+        "clock#date",
+        "clock#time"
+    ],
+    "battery": {
+        "interval": 10,
+        "states": {
+            "warning": 30,
+            "critical": 15
+        },
+        "format": "  {icon}  {capacity}%",
+        "format-discharging": "{icon}  {capacity}%",
+        "format-icons": ["", "", "", "", ""],
+        "tooltip": true
+    },
+    "clock#time": {
+        "interval": 1,
+        "format": "{:%H:%M}",
+        "tooltip": false
+    },
+    "clock#date": {
+        "interval": 10,
+        "format": "  {:%e %b %Y}",
+        "tooltip-format": "{:%e %B %Y}"
+    },
+    "cpu": {
+        "interval": 5,
+        "format": "  {usage}% ({load})",
+        "states": {
+            "warning": 70,
+            "critical": 90
+        }
+    },
+    "memory": {
+        "interval": 5,
+        "format": "  {used:0.1f}G/{total:0.0f}G ({percentage}%)",
+        "tooltip": true
+    },
+    "network": {
+        "interval": 5,
+        "format-wifi": "  {essid} ({signalStrength}%)",
+        "format-ethernet": "  {ifname}: {ipaddr}/{cidr}",
+        "format-disconnected": "  Disconnected",
+        "tooltip-format": "{ifname}: {ipaddr}"
+    },
+    "niri/workspaces": {
+        "all-outputs": false,
+        "disable-scroll": true,
+        "format": "{icon} {index}",
+        "format-icons": {
+            "active": " ",
+            "default": " "
+        }
+    },
+    "niri/window": {
+        "format": "{}",
+        "max-length": 120
+    },
+    "pulseaudio": {
+        "scroll-step": 1,
+        "format": "{icon}  {volume}%",
+        "format-bluetooth": "{icon}  {volume}%",
+        "format-muted": "",
+        "format-icons": {
+            "headphones": "",
+            "handsfree": "",
+            "headset": "",
+            "phone": "",
+            "portable": "",
+            "car": "",
+            "default": ["", ""]
+        },
+        "on-click": "org.pulseaudio.pavucontrol"
+    },
+    "temperature": {
+        "critical-threshold": 80,
+        "interval": 5,
+        "format": "{icon}  {temperatureC}°C",
+        "format-icons": ["", "", "", "", ""],
+        "tooltip": true
+    },
+    "temperature#cpu": {
+        "hwmon-path": "/sys/class/hwmon/hwmon1/temp1_input",
+        "critical-threshold": 80,
+        "format": " CPU {temperatureC}°C"
+    },
+    "custom/gpu-temp": {
+        "exec": "nvidia-smi --query-gpu=temperature.gpu --format=csv,noheader,nounits",
+        "interval": 5,
+        "format": "GPU {}"
+    },
+    "tray": {
+        "icon-size": 21,
+        "spacing": 10
+    }
+}

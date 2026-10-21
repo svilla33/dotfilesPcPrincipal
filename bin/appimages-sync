@@ -1,0 +1,43 @@
+#!/bin/bash
+
+APPDIR="$HOME/AppImages"
+DESKTOPDIR="$HOME/.local/share/applications"
+
+# Crear directorios si no existen
+mkdir -p "$APPDIR"
+mkdir -p "$DESKTOPDIR"
+
+find "$APPDIR" -maxdepth 1 -type f -name "*.AppImage" | while read -r app; do
+    # Dar permisos de ejecución a la AppImage
+    chmod +x "$app"
+
+    filename="$(basename "$app")"
+    name="${filename%.AppImage}"
+
+    desktop="$DESKTOPDIR/$name.desktop"
+
+    cat > "$desktop" <<EOF
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=$name
+Comment=AppImage Launcher
+Exec="$app"
+Icon=application-x-executable
+Terminal=false
+Categories=Utility;
+StartupNotify=true
+EOF
+
+    # Permisos para el lanzador
+    chmod 755 "$desktop"
+
+    echo "Generado: $desktop"
+done
+
+# Actualizar caché de aplicaciones si existe la herramienta
+if command -v update-desktop-database >/dev/null 2>&1; then
+    update-desktop-database "$DESKTOPDIR"
+fi
+
+echo "Sincronización completada."
